@@ -1,0 +1,20 @@
+# Build artifacts
+build/
+target/
+out/
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+
+# Node.js
+node_modules/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store

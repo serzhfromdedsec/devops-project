@@ -1,2 +1,2 @@
 Devops Final Project - SerzhanA
-Branch: develop
+Branches: develop and  feature/setup-script
