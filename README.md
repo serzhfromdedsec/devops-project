@@ -1,2 +1,3 @@
-Devops Final Project - SerzhanA
-Branches: develop and  feature/setup-script
+DevOps Final Project - SerzhanA
+Branch: feature/setup-script
+
