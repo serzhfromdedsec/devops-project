@@ -3,10 +3,13 @@ pipeline {
 
   options {
     timestamps()
+    disableConcurrentBuilds()
   }
 
   environment {
-    IMAGE_NAME = "serzhfromdedsec/devops-project"
+    // Поменяй IMAGE_NAME под свой registry/неймспейс позже.
+    // Сейчас можно оставить так, чтобы Docker Build работал локально.
+    IMAGE_NAME = "serzhan/todo-app"
     IMAGE_TAG  = "${BUILD_NUMBER}"
   }
 
@@ -15,39 +18,64 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
-        sh 'git branch --show-current'
+        sh 'git rev-parse --short HEAD'
+        sh 'git branch --show-current || true'
       }
     }
 
-    stage('Build') {
+    stage('Build (Gradle Wrapper)') {
       steps {
-        dir('app/online-library') {
-          sh 'chmod +x ./gradlew'
-          sh './gradlew clean build'
+        sh 'ls -la'
+        sh 'test -f ./gradlew'
+        sh 'chmod +x ./gradlew'
+        sh './gradlew clean build'
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'build/libs/*.jar', allowEmptyArchive: true
         }
       }
     }
 
     stage('Test') {
       steps {
-        dir('app/online-library') {
-          sh './gradlew test'
+        sh './gradlew test'
+      }
+      post {
+        always {
+          junit testResults: 'build/test-results/test/*.xml', allowEmptyResults: true
         }
       }
     }
 
-    stage('Docker Build') {
+    stage('Static Analysis (optional)') {
+      steps {
+        // Если в проекте настроен Checkstyle/SpotBugs — выполнится.
+        // Если нет — не завалим сборку (|| true).
+        sh './gradlew checkstyleMain checkstyleTest || true'
+        sh './gradlew spotbugsMain spotbugsTest || true'
+      }
+      post {
+        always {
+          archiveArtifacts artifacts: 'build/reports/**', allowEmptyArchive: true
+        }
+      }
+    }
+
+    stage('Docker Build (dynamic tag)') {
       steps {
         sh """
-          docker build -t ${IMAGE_NAME}:${IMAGE_TAG} \
-          -f docker/Dockerfile_SerzhanA .
+          docker build \
+            -t ${IMAGE_NAME}:${IMAGE_TAG} \
+            -f docker/Dockerfile_SerzhanA .
+          docker images | head
         """
       }
     }
 
     stage('Docker Push') {
       steps {
-        echo "Docker push skipped (no registry credentials configured)"
+        echo "Docker push skipped: configure registry credentials when ready."
       }
     }
 
@@ -56,7 +84,7 @@ pipeline {
         branch 'main'
       }
       steps {
-        echo "Deploying application from main branch"
+        echo "Deploy runs only on main branch."
       }
     }
   }
