@@ -21,14 +21,18 @@ pipeline {
 
     stage('Build') {
       steps {
-        sh 'chmod +x ./gradlew'
-        sh './gradlew clean build'
+        dir('app/online-library') {
+          sh 'chmod +x ./gradlew'
+          sh './gradlew clean build'
+        }
       }
     }
 
     stage('Test') {
       steps {
-        sh './gradlew test'
+        dir('app/online-library') {
+          sh './gradlew test'
+        }
       }
     }
 
