@@ -7,8 +7,7 @@ pipeline {
   }
 
   environment {
-    // Поменяй IMAGE_NAME под свой registry/неймспейс позже.
-    // Сейчас можно оставить так, чтобы Docker Build работал локально.
+    APP_DIR   = "app/online-library"
     IMAGE_NAME = "serzhan/todo-app"
     IMAGE_TAG  = "${BUILD_NUMBER}"
   }
@@ -19,45 +18,42 @@ pipeline {
       steps {
         checkout scm
         sh 'git rev-parse --short HEAD'
-        sh 'git branch --show-current || true'
       }
     }
 
     stage('Build (Gradle Wrapper)') {
       steps {
-        sh 'ls -la'
-        sh 'test -f ./gradlew'
-        sh 'chmod +x ./gradlew'
-        sh './gradlew clean build'
+        sh "ls -la ${APP_DIR}"
+        sh "test -f ${APP_DIR}/gradlew"
+        sh "chmod +x ${APP_DIR}/gradlew"
+        sh "cd ${APP_DIR} && ./gradlew clean build"
       }
       post {
         always {
-          archiveArtifacts artifacts: 'build/libs/*.jar', allowEmptyArchive: true
+          archiveArtifacts artifacts: "${APP_DIR}/build/libs/*.jar", allowEmptyArchive: true
         }
       }
     }
 
     stage('Test') {
       steps {
-        sh './gradlew test'
+        sh "cd ${APP_DIR} && ./gradlew test"
       }
       post {
         always {
-          junit testResults: 'build/test-results/test/*.xml', allowEmptyResults: true
+          junit testResults: "${APP_DIR}/build/test-results/test/*.xml", allowEmptyResults: true
         }
       }
     }
 
     stage('Static Analysis (optional)') {
       steps {
-        // Если в проекте настроен Checkstyle/SpotBugs — выполнится.
-        // Если нет — не завалим сборку (|| true).
-        sh './gradlew checkstyleMain checkstyleTest || true'
-        sh './gradlew spotbugsMain spotbugsTest || true'
+        sh "cd ${APP_DIR} && ./gradlew checkstyleMain checkstyleTest || true"
+        sh "cd ${APP_DIR} && ./gradlew spotbugsMain spotbugsTest || true"
       }
       post {
         always {
-          archiveArtifacts artifacts: 'build/reports/**', allowEmptyArchive: true
+          archiveArtifacts artifacts: "${APP_DIR}/build/reports/**", allowEmptyArchive: true
         }
       }
     }
@@ -80,9 +76,7 @@ pipeline {
     }
 
     stage('Deploy (main only)') {
-      when {
-        branch 'main'
-      }
+      when { branch 'main' }
       steps {
         echo "Deploy runs only on main branch."
       }
@@ -90,12 +84,7 @@ pipeline {
   }
 
   post {
-    success {
-      echo "PIPELINE SUCCESS"
-    }
-    failure {
-      echo "PIPELINE FAILED"
-    }
+    success { echo "PIPELINE SUCCESS" }
+    failure { echo "PIPELINE FAILED" }
   }
 }
-
