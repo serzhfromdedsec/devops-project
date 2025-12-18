@@ -1,0 +1,27 @@
+pipeline {
+  agent any
+
+  environment {
+    // Укажи URL своего репозитория (HTTPS)
+    GIT_REPO_URL = 'https://github.com/<GITHUB_USER>/<REPO_NAME>.git'
+    // Credentials ID из Jenkins → Credentials
+    GIT_CREDENTIALS_ID = 'git-creds-SerzhanA'
+    // Ветка, которую собираем
+    GIT_BRANCH = 'main'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout([
+          $class: 'GitSCM',
+          branches: [[name: "*/${env.GIT_BRANCH}"]],
+          userRemoteConfigs: [[
+            url: env.GIT_REPO_URL,
+            credentialsId: env.GIT_CREDENTIALS_ID
+          ]]
+        ])
+      }
+    }
+  }
+}
