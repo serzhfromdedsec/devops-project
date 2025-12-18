@@ -1,0 +1,40 @@
+# =========================
+# Stage 1: Build (Gradle Wrapper)
+# =========================
+FROM eclipse-temurin:17-jdk AS build
+WORKDIR /workspace
+
+# Copy Gradle wrapper + configs first to leverage caching
+COPY app/online-library/gradlew app/online-library/gradlew
+COPY app/online-library/gradle  app/online-library/gradle
+COPY app/online-library/build.gradle app/online-library/build.gradle
+COPY app/online-library/settings.gradle app/online-library/settings.gradle
+
+# Now copy the source
+COPY app/online-library/src app/online-library/src
+
+WORKDIR /workspace/app/online-library
+
+# Use Gradle Wrapper as required
+RUN chmod +x ./gradlew && ./gradlew clean build -x test
+
+# =========================
+# Stage 2: Runtime (Non-root)
+# =========================
+FROM eclipse-temurin:17-jre
+WORKDIR /app
+
+# Create non-root user
+RUN useradd -m appuser
+USER appuser
+
+# Copy jar from build stage (as required: build/libs/)
+COPY --from=build /workspace/app/online-library/build/libs/*.jar /app/app.jar
+
+EXPOSE 8080
+
+# Healthcheck (Actuator)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD curl -fsS http://localhost:8080/actuator/health || exit 1
+
+ENTRYPOINT ["java","-jar","/app/app.jar"]
